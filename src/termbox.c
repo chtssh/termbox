@@ -62,7 +62,6 @@ static void cellbuf_resize(struct cellbuf *buf, int width, int height);
 static void cellbuf_clear(struct cellbuf *buf);
 static void cellbuf_free(struct cellbuf *buf);
 
-static void update_size(void);
 static void update_term_size(void);
 static void send_attr(uint16_t fg, uint16_t bg);
 static void send_char(int x, int y, uint32_t c);
@@ -177,7 +176,7 @@ void tb_present(void)
 	lasty = LAST_COORD_INIT;
 
 	if (buffer_size_change_request) {
-		update_size();
+		tb_update_size();
 		buffer_size_change_request = 0;
 	}
 
@@ -309,7 +308,7 @@ int tb_height(void)
 void tb_clear(void)
 {
 	if (buffer_size_change_request) {
-		update_size();
+		tb_update_size();
 		buffer_size_change_request = 0;
 	}
 	cellbuf_clear(&back_buffer);
@@ -350,6 +349,16 @@ void tb_set_clear_attributes(uint16_t fg, uint16_t bg)
 	foreground = fg;
 	background = bg;
 }
+
+void tb_update_size(void)
+{
+	update_term_size();
+	cellbuf_resize(&back_buffer, termw, termh);
+	cellbuf_resize(&front_buffer, termw, termh);
+	cellbuf_clear(&front_buffer);
+	send_clear();
+}
+
 
 /* -------------------------------------------------------- */
 
@@ -580,15 +589,6 @@ static void sigwinch_handler(int xxx)
 	(void) xxx;
 	const int zzz = 1;
 	write(winch_fds[1], &zzz, sizeof(int));
-}
-
-static void update_size(void)
-{
-	update_term_size();
-	cellbuf_resize(&back_buffer, termw, termh);
-	cellbuf_resize(&front_buffer, termw, termh);
-	cellbuf_clear(&front_buffer);
-	send_clear();
 }
 
 static int read_up_to(int n) {
